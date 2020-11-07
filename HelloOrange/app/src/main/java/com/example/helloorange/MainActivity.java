@@ -1,5 +1,6 @@
 package com.example.helloorange;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -7,6 +8,7 @@ import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothManager;
+import android.os.Build;
 import android.os.Bundle;
 
 import android.content.Intent;
@@ -40,6 +42,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import static com.example.helloorange.UARTUtil.*;
+
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -51,13 +55,15 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<BluetoothDevice> mConnectedDevices;
     private ArrayAdapter<BluetoothDevice> mConnectedDevicesAdapter;
 
+    private byte[] storage = hexStringToByteArray("1111");
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        checkAndRequestPermissions(this);
+        //checkAndRequestPermissions(this);
 
 
         ListView list = new ListView(this);
@@ -71,34 +77,8 @@ public class MainActivity extends AppCompatActivity {
         mBluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
         mBluetoothAdapter = mBluetoothManager.getAdapter();
 
-
     }
 
-    // https://stackoverflow.com/a/35495855
-    public static final int REQUEST_ID_MULTIPLE_PERMISSIONS = 1;
-    private  boolean checkAndRequestPermissions(Activity activity) {
-
-        int locationPermission = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION);
-        int locationPermission2= ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION );
-
-        int storagePermission = ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        List<String> listPermissionsNeeded = new ArrayList<>();
-
-        if (locationPermission != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
-        if (locationPermission2 != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-        }
-        if (storagePermission != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        }
-        if (!listPermissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]),REQUEST_ID_MULTIPLE_PERMISSIONS);
-            return false;
-        }
-        return true;
-    }
 
 
     protected void onResume() {
@@ -203,6 +183,7 @@ public class MainActivity extends AppCompatActivity {
     /*
      * Initialize the advertiser
      */
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void startAdvertising() {
         if (mBluetoothLeAdvertiser == null) return;
 
@@ -320,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
 
                 //IMP: Copy the received value to storage
                 storage = value;
-                if (responseNeeded) {
+                    if (responseNeeded) {
                     mGattServer.sendResponse(device,
                             requestId,
                             BluetoothGatt.GATT_SUCCESS,
@@ -384,11 +365,6 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
-
-
-
-
-
     //Send notification to all the devices once you write
     private void sendOurResponse() {
         for (BluetoothDevice device : mConnectedDevices) {
@@ -398,7 +374,6 @@ public class MainActivity extends AppCompatActivity {
             byte[] notify_msg = storage;
             String hexStorage =  bytesToHex(storage);
             Log.d(TAG, "received string = "+bytesToHex(storage));
-
 
             if(hexStorage.equals("77686F616D69")){
 
@@ -419,35 +394,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    private byte[] storage = hexStringToByteArray("1111");
-
-    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-
-    //Helper function converts byte array to hex string
-    //for priting
-    public static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for ( int j = 0; j < bytes.length; j++ ) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = hexArray[v >>> 4];
-            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-        }
-        return new String(hexChars);
-    }
-
-
-    //Helper function converts hex string into
-    //byte array
-    public static byte[] hexStringToByteArray(String s) {
-        int len = s.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i+1), 16));
-        }
-        return data;
-    }
 
 
 }
