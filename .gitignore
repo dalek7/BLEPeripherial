@@ -1,3 +1,20 @@
+build/
+Build/
+bin/
+obj/
+
+# MAC-stuff
+.DS_Store
+
+# pycharm
+.idea/
+.ipynb_checkpoints
+
+# Seung
+__not/
+
+
+
 # Built application files
 *.apk
 *.aar
