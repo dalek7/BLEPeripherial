@@ -40,6 +40,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import static com.example.helloorange.UARTUtil.*;
@@ -55,8 +56,11 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<BluetoothDevice> mConnectedDevices;
     private ArrayAdapter<BluetoothDevice> mConnectedDevicesAdapter;
 
-    private byte[] storage = hexStringToByteArray("1111");
+    private ArrayList<String> mMessageReceived;
+    private ArrayAdapter<String> mMessageReceivedAdapter;
 
+    private byte[] storage = hexStringToByteArray("1111");
+    ListView mListView1, mListView2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,18 +69,29 @@ public class MainActivity extends AppCompatActivity {
 
         //checkAndRequestPermissions(this);
 
+        mListView1 =  (ListView) findViewById(R.id.listView1);
+        mListView2 =  (ListView) findViewById(R.id.listView2);
 
-        ListView list = new ListView(this);
-        setContentView(list);
+        //ListView list = new ListView(this);
+        //setContentView(list);
 
         mConnectedDevices = new ArrayList<BluetoothDevice>();
         mConnectedDevicesAdapter = new ArrayAdapter<BluetoothDevice>(this,
                 android.R.layout.simple_list_item_1, mConnectedDevices);
-        list.setAdapter(mConnectedDevicesAdapter);
+        mListView1.setAdapter(mConnectedDevicesAdapter);
+
 
         mBluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
         mBluetoothAdapter = mBluetoothManager.getAdapter();
 
+        mMessageReceived = new ArrayList<String>();
+        mMessageReceivedAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1, mMessageReceived);
+
+        mListView2.setAdapter(mMessageReceivedAdapter);
+
+
+        mMessageReceived.add("Ready...");
     }
 
 
@@ -84,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         /*
-         * Make sure bluettoth is enabled
+         * Make sure bluetooth is enabled
          */
         if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
             //Bluetooth is disabled
@@ -139,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private Handler mHandler = new Handler();
+
     private void postStatusMessage(final String message) {
         mHandler.post(new Runnable() {
             @Override
@@ -314,12 +330,18 @@ public class MainActivity extends AppCompatActivity {
 
                 //IMP: Respond
                 sendOurResponse();
-                final String buf = String.format("We received : %s \n from %s \nthru %s", new String(value), device.getAddress().toString(), characteristic.getUuid().toString());//new String(value);//String.format("We received data: %s", value);
-
+                final String msgstr = new String(value);
+                final String buf = String.format("%s from %s", msgstr, device.getName().toString());
+                //final String buf = String.format("We received : %s \n from %s \nthru %s", msgstr, device.getAddress().toString(), characteristic.getUuid().toString());//new String(value);//String.format("We received data: %s", value);
+                //mMessageReceivedAdapter.notifyDataSetChanged();
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(MainActivity.this, buf , Toast.LENGTH_SHORT).show();
+
+                        mMessageReceivedAdapter.insert(buf, 0);
+
+
+                        //Toast.makeText(MainActivity.this, buf , Toast.LENGTH_SHORT).show();
                     }
                 });
 
