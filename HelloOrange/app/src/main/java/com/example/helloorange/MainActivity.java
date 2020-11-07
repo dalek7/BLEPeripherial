@@ -38,7 +38,9 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.util.Log;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -61,6 +63,8 @@ public class MainActivity extends AppCompatActivity {
 
     private byte[] storage = hexStringToByteArray("1111");
     ListView mListView1, mListView2;
+    Button mBtn1;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,6 +96,20 @@ public class MainActivity extends AppCompatActivity {
 
 
         mMessageReceived.add("Ready...");
+
+        mBtn1 = (Button) findViewById(R.id.button1);
+
+        //mBtn1.setVisibility(View.INVISIBLE);
+        mBtn1.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                //mBtn1.setVisibility(View.INVISIBLE);
+                // TO last device
+                sendTestMsg();
+
+            }
+        });
     }
 
 
@@ -386,7 +404,30 @@ public class MainActivity extends AppCompatActivity {
         //end of gatt server
     };
 
+    private void sendTestMsg()
+    {
+        Log.d(TAG, "aaa");
+        for (BluetoothDevice device : mConnectedDevices) {
+            String buf;
+            buf = String.format("%s %s", device.getName().toString(), device.getAddress().toString());
+            Log.d(TAG, buf );
+            // S20 --> 74:9E:F5:A7:81:E0
+            String dev_last4 = device.getAddress().toString().substring(12);
+            if(dev_last4.toLowerCase().equals("81:e0") )
+            {
+                String buf2 = String.format("Connected with %s (%s)", device.getName().toString(), dev_last4 );
+                Log.d(TAG, buf2);
+                mMessageReceivedAdapter.insert(buf2, 0);
+            }
+            BluetoothGattCharacteristic readCharacteristic = mGattServer.getService(UARTProfile.UART_SERVICE)
+                    .getCharacteristic(UARTProfile.TX_READ_CHAR);
 
+
+
+        }
+
+
+    }
     //Send notification to all the devices once you write
     private void sendOurResponse() {
         for (BluetoothDevice device : mConnectedDevices) {
@@ -397,11 +438,11 @@ public class MainActivity extends AppCompatActivity {
             String hexStorage =  bytesToHex(storage);
             Log.d(TAG, "received string = "+bytesToHex(storage));
 
-            if(hexStorage.equals("77686F616D69")){
+            if(hexStorage.equals("77686F616D69")){ //whoami
 
                 notify_msg = "I am echo an machine".getBytes();
 
-            }else if(bytesToHex(storage).equals("64617465")){
+            }else if(bytesToHex(storage).equals("64617465")){ //date
                 DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
                 Date date = new Date();
                 notify_msg = dateFormat.format(date).getBytes();
