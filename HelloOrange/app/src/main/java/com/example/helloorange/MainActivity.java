@@ -133,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
                 // TO last device
                 //sendTestMsg();
                 //SendMessageToHost("Hello!");
-                
+
                 SendMessageToSelectedDev(mEditText1.getText().toString());
                 //SendMessageToHost("Hello !");
 
@@ -374,7 +374,7 @@ public class MainActivity extends AppCompatActivity {
 
                 //IMP: Copy the received value to storage
                 storage = value;
-                    if (responseNeeded) {
+                if (responseNeeded) {
                     mGattServer.sendResponse(device,
                             requestId,
                             BluetoothGatt.GATT_SUCCESS,
@@ -386,8 +386,10 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 //IMP: Respond
-                sendOurResponse();
+                //sendOurResponse();
+
                 final String msgstr = new String(value);
+                ProcMessage(value);
                 final String buf = String.format("%s from %s", msgstr, device.getName().toString());
                 //final String buf = String.format("We received : %s \n from %s \nthru %s", msgstr, device.getAddress().toString(), characteristic.getUuid().toString());//new String(value);//String.format("We received data: %s", value);
                 //mMessageReceivedAdapter.notifyDataSetChanged();
@@ -403,20 +405,21 @@ public class MainActivity extends AppCompatActivity {
         }
 
         //Send notification to all the devices once you write
-        private void sendOurResponse() {
+        private void ProcMessage(byte[] value) {
+            //String buf = new String(value);
             for (BluetoothDevice device : mConnectedDevices) {
                 BluetoothGattCharacteristic readCharacteristic = mGattServer.getService(UARTProfile.UART_SERVICE)
                         .getCharacteristic(UARTProfile.TX_READ_CHAR);
 
-                byte[] notify_msg = storage;
-                String hexStorage =  bytesToHex(storage);
-                Log.d(TAG, "received string = "+bytesToHex(storage));
+                byte[] notify_msg = value;
+                String hexStorage =  bytesToHex(value);
+                Log.d(TAG, "received string = "+bytesToHex(value));
 
                 if(hexStorage.equals("77686F616D69")){ //whoami
 
                     notify_msg = "I am echo an machine".getBytes();
 
-                }else if(bytesToHex(storage).equals("64617465")){ //date
+                }else if(bytesToHex(value).equals("64617465")){ //date
                     DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
                     Date date = new Date();
                     notify_msg = dateFormat.format(date).getBytes();
