@@ -83,6 +83,8 @@ public class MainActivity extends AppCompatActivity {
 
         mEditText1.setText("Hello");
         mEditText1.setVisibility(View.INVISIBLE);
+
+
         //ListView list = new ListView(this);
         //setContentView(list);
 
@@ -139,17 +141,22 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+        mBtn1.setVisibility(View.INVISIBLE);
     }
 
     private void UpdateSelection()
     {
-        if(mSelectedDev == null)
+        if(mSelectedDev == null) {
+            postStatusMessage("GATT Server Ready");
             return;
+        }
 
         String devname = mSelectedDev.getName().toString();
         mTextView3.setText(devname);
 
         mEditText1.setVisibility(View.VISIBLE);
+        mBtn1.setVisibility(View.VISIBLE);
+        postStatusMessage("Connected to "+devname);
     }
 
 
