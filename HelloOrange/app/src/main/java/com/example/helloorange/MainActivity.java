@@ -39,14 +39,15 @@ import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import static com.example.helloorange.UARTUtil.*;
-
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -63,9 +64,11 @@ public class MainActivity extends AppCompatActivity {
 
     private byte[] storage = hexStringToByteArray("1111");
     ListView mListView1, mListView2;
+    TextView mTextView3;
+    EditText mEditText1;
     Button mBtn1;
 
-
+    BluetoothDevice mSelectedDev;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,9 +76,13 @@ public class MainActivity extends AppCompatActivity {
 
         //checkAndRequestPermissions(this);
 
-        mListView1 =  (ListView) findViewById(R.id.listView1);
-        mListView2 =  (ListView) findViewById(R.id.listView2);
+        mListView1 = (ListView) findViewById(R.id.listView1);
+        mListView2 = (ListView) findViewById(R.id.listView2);
+        mTextView3 = (TextView) findViewById(R.id.textView3);
+        mEditText1 = (EditText) findViewById(R.id.editText1);
 
+        mEditText1.setText("Hello");
+        mEditText1.setVisibility(View.INVISIBLE);
         //ListView list = new ListView(this);
         //setContentView(list);
 
@@ -85,6 +92,24 @@ public class MainActivity extends AppCompatActivity {
         mListView1.setAdapter(mConnectedDevicesAdapter);
 
 
+        mListView1.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+                BluetoothDevice dev = (BluetoothDevice) parent.getAdapter().getItem(position);
+                mSelectedDev = dev;
+                UpdateSelection();
+
+                String buf = String.format("Selected: %d -> %s (%s)", position, dev.getAddress().toString(), dev.getName().toString());
+                Log.d(TAG, buf);
+
+                String buf2 = String.format("%s", mSelectedDev.getName());
+                Toast toast = Toast.makeText(getApplicationContext(), buf2, Toast.LENGTH_SHORT);
+                toast.show();
+            }
+        });
+
+
+        mSelectedDev = null;
         mBluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
         mBluetoothAdapter = mBluetoothManager.getAdapter();
 
@@ -106,12 +131,26 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 //mBtn1.setVisibility(View.INVISIBLE);
                 // TO last device
-                sendTestMsg();
+                //sendTestMsg();
+                //SendMessageToHost("Hello!");
+                
+                SendMessageToSelectedDev(mEditText1.getText().toString());
+                //SendMessageToHost("Hello !");
 
             }
         });
     }
 
+    private void UpdateSelection()
+    {
+        if(mSelectedDev == null)
+            return;
+
+        String devname = mSelectedDev.getName().toString();
+        mTextView3.setText(devname);
+
+        mEditText1.setVisibility(View.VISIBLE);
+    }
 
 
     protected void onResume() {
@@ -355,10 +394,7 @@ public class MainActivity extends AppCompatActivity {
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
-
                         mMessageReceivedAdapter.insert(buf, 0);
-
-
                         //Toast.makeText(MainActivity.this, buf , Toast.LENGTH_SHORT).show();
                     }
                 });
@@ -366,6 +402,38 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        //Send notification to all the devices once you write
+        private void sendOurResponse() {
+            for (BluetoothDevice device : mConnectedDevices) {
+                BluetoothGattCharacteristic readCharacteristic = mGattServer.getService(UARTProfile.UART_SERVICE)
+                        .getCharacteristic(UARTProfile.TX_READ_CHAR);
+
+                byte[] notify_msg = storage;
+                String hexStorage =  bytesToHex(storage);
+                Log.d(TAG, "received string = "+bytesToHex(storage));
+
+                if(hexStorage.equals("77686F616D69")){ //whoami
+
+                    notify_msg = "I am echo an machine".getBytes();
+
+                }else if(bytesToHex(storage).equals("64617465")){ //date
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    notify_msg = dateFormat.format(date).getBytes();
+
+                }else{
+                    //TODO: Do nothing send what you received. Basically echo
+                }
+                readCharacteristic.setValue(notify_msg);
+                Log.d(TAG, "Sending Notifications"+notify_msg);
+
+                //notifyCharacteristicChanged()
+                // -->  A notification or indication is sent to the remote device to signal that the characteristic has been updated.
+
+                boolean is_notified =  mGattServer.notifyCharacteristicChanged(device, readCharacteristic, false);
+                Log.d(TAG, "Notifications ="+is_notified);
+            }
+        }
 
 
         @Override
@@ -404,9 +472,54 @@ public class MainActivity extends AppCompatActivity {
         //end of gatt server
     };
 
+    private void SendMessageToSelectedDev(String msg) {
+        if (mSelectedDev==null) return;
+
+        BluetoothGattCharacteristic txChar = mGattServer.getService(UARTProfile.UART_SERVICE)
+                .getCharacteristic(UARTProfile.TX_READ_CHAR);
+
+        byte[] notify_msg = msg.getBytes();
+        txChar.setValue(notify_msg);
+
+        boolean is_notified =  mGattServer.notifyCharacteristicChanged(mSelectedDev, txChar, false);
+        Log.d(TAG, "Notifications ="+is_notified);
+
+        String buf = String.format("Sent to %s..%b: %s", mSelectedDev.getName().toString(), is_notified, msg);
+        mMessageReceivedAdapter.insert(buf, 0);
+
+
+    }
+
+
+    private void SendMessageToHost(String msg) {
+        for (BluetoothDevice device : mConnectedDevices) {
+
+            String dev_last4 = device.getAddress().toString().substring(12);
+
+
+            if(dev_last4.toLowerCase().equals("81:e0") ) // TODO : find another way
+            {
+
+                BluetoothGattCharacteristic txChar = mGattServer.getService(UARTProfile.UART_SERVICE)
+                        .getCharacteristic(UARTProfile.TX_READ_CHAR);
+
+                byte[] notify_msg = msg.getBytes();
+                txChar.setValue(notify_msg);
+
+                boolean is_notified =  mGattServer.notifyCharacteristicChanged(device, txChar, false);
+                Log.d(TAG, "Notifications ="+is_notified);
+
+                String buf = String.format("Sent to %s..%b: %s", device.getName().toString(), is_notified, msg);
+                mMessageReceivedAdapter.insert(buf, 0);
+            }
+
+        }
+
+    }
+
     private void sendTestMsg()
     {
-        Log.d(TAG, "aaa");
+        //Log.d(TAG, "aaa");
         for (BluetoothDevice device : mConnectedDevices) {
             String buf;
             buf = String.format("%s %s", device.getName().toString(), device.getAddress().toString());
@@ -419,42 +532,13 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, buf2);
                 mMessageReceivedAdapter.insert(buf2, 0);
             }
-            BluetoothGattCharacteristic readCharacteristic = mGattServer.getService(UARTProfile.UART_SERVICE)
-                    .getCharacteristic(UARTProfile.TX_READ_CHAR);
+
 
 
 
         }
 
 
-    }
-    //Send notification to all the devices once you write
-    private void sendOurResponse() {
-        for (BluetoothDevice device : mConnectedDevices) {
-            BluetoothGattCharacteristic readCharacteristic = mGattServer.getService(UARTProfile.UART_SERVICE)
-                    .getCharacteristic(UARTProfile.TX_READ_CHAR);
-
-            byte[] notify_msg = storage;
-            String hexStorage =  bytesToHex(storage);
-            Log.d(TAG, "received string = "+bytesToHex(storage));
-
-            if(hexStorage.equals("77686F616D69")){ //whoami
-
-                notify_msg = "I am echo an machine".getBytes();
-
-            }else if(bytesToHex(storage).equals("64617465")){ //date
-                DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-                Date date = new Date();
-                notify_msg = dateFormat.format(date).getBytes();
-
-            }else{
-                //TODO: Do nothing send what you received. Basically echo
-            }
-            readCharacteristic.setValue(notify_msg);
-            Log.d(TAG, "Sending Notifications"+notify_msg);
-            boolean is_notified =  mGattServer.notifyCharacteristicChanged(device, readCharacteristic, false);
-            Log.d(TAG, "Notifications ="+is_notified);
-        }
     }
 
 
