@@ -12,5 +12,7 @@ Android Gatt Server : 기다리고 있다가 외부에서 접속이 들어오면
 
 ## Test software
 ### nRF Connect for Mobile 
-See https://www.nordicsemi.com/Software-and-tools/Development-Tools/nRF-Connect-for-mobile
+See  https://www.nordicsemi.com/Software-and-tools/Development-Tools/nRF-Connect-for-mobile
 
+
+Last Update: November 8th, 2020
