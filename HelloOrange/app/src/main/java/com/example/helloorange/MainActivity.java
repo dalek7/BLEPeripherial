@@ -88,11 +88,10 @@ public class MainActivity extends AppCompatActivity {
         //ListView list = new ListView(this);
         //setContentView(list);
 
-        mConnectedDevices = new ArrayList<BluetoothDevice>();
-        mConnectedDevicesAdapter = new ArrayAdapter<BluetoothDevice>(this,
-                android.R.layout.simple_list_item_1, mConnectedDevices);
-        mListView1.setAdapter(mConnectedDevicesAdapter);
-
+            mConnectedDevices = new ArrayList<BluetoothDevice>();
+            mConnectedDevicesAdapter = new ArrayAdapter<BluetoothDevice>(this,
+                    android.R.layout.simple_list_item_1, mConnectedDevices);
+            mListView1.setAdapter(mConnectedDevicesAdapter);
 
         mListView1.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -142,8 +141,20 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         mBtn1.setVisibility(View.INVISIBLE);
+        ensureDiscoverable();
     }
 
+    /**
+     * Makes this device discoverable for 300 seconds (5 minutes).
+     */
+    private void ensureDiscoverable() {
+        if (mBluetoothAdapter.getScanMode() !=
+                BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+            startActivity(discoverableIntent);
+        }
+    }
     private void UpdateSelection()
     {
         if(mSelectedDev == null) {
